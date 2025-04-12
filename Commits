@@ -1,3 +1,6 @@
 #Added a GUI for the Quiz Bowl Questions, and the GUI for the Admin Login. 
-#Added functionality for the quiz questions and Admin Login. 
+#Added functionality for the quiz questions and Admin Login. (add questions, use edit/delete questions in the panel, passwords)
+#added and fixed the back button for the edit/delete panels. 
+#added Multiple answer questions and the ability to select multiple answers. 
+#fixed bug that wouldnt allow you to unselect an answer choice
 
