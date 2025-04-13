@@ -3,7 +3,7 @@ Requirements:
 Python 3.6+
 Tkinter (included in standard Python installation)
 SQLite3 (included in standard Python installation)
-Make sure the Database file and the application are in the same folder so it can access it. 
+Make sure the Database file is in the correct place for it to work with the application or else the questions wont load up. 
 
 Taking a Quiz:
 
