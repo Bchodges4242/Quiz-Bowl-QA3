@@ -4,6 +4,64 @@ import sqlite3
 import random
 import json
 
+class Question:
+    def __init__(self, question_data):
+        self.question_text = question_data["question"]
+        self.options = question_data["options"]
+        self.correct_answers = question_data["answers"]
+        self.is_multiple_choice = question_data["is_multiple_choice"]
+        self.feedback = question_data["feedback"]
+        self.selected_answers = []
+    
+    def create_widgets(self, parent_frame):
+        tk.Label(parent_frame, text=self.question_text, font=("Arial", 16), wraplength=700).pack(pady=20)
+        
+        choice_type = "Multiple answers allowed" if self.is_multiple_choice else "Select one answer"
+        tk.Label(parent_frame, text=choice_type, font=("Arial", 12, "italic")).pack(pady=5)
+        
+        options_frame = tk.Frame(parent_frame)
+        options_frame.pack(pady=10, fill=tk.X)
+        
+        if self.is_multiple_choice:
+            self.option_vars = []
+            for option in self.options:
+                var = tk.BooleanVar()
+                self.option_vars.append((var, option))
+                tk.Checkbutton(options_frame, text=option, font=("Arial", 14),
+                              variable=var, padx=10, pady=5).pack(anchor=tk.W)
+        else:
+            answer_var = tk.StringVar()
+            self.option_vars = answer_var
+            for option in self.options:
+                tk.Radiobutton(options_frame, text=option, font=("Arial", 14),
+                              variable=answer_var, value=option, padx=10, pady=5).pack(anchor=tk.W)
+        
+        return options_frame
+    
+    def get_user_answers(self):
+        user_answers = []
+        
+        if self.is_multiple_choice:
+            for var, option in self.option_vars:
+                if var.get():
+                    user_answers.append(option)
+        else:
+            if self.option_vars.get():
+                user_answers = [self.option_vars.get()]
+                
+        return user_answers
+    
+    def validate_answers(self, user_answers):
+        if not user_answers:
+            return None
+            
+        if self.is_multiple_choice:
+            is_correct = set(user_answers) == set(self.correct_answers)
+        else:
+            is_correct = user_answers[0] in self.correct_answers
+            
+        return is_correct
+
 class QuizDatabase:
     def __init__(self, db_file="quiz_database.db"):
         self.db_file = db_file
@@ -46,10 +104,13 @@ class QuizDatabase:
     def _migrate_database(self, conn, cursor):
         cursor.execute("ALTER TABLE questions ADD COLUMN correct_answers TEXT")
         cursor.execute("ALTER TABLE questions ADD COLUMN is_multiple_choice BOOLEAN NOT NULL DEFAULT 0")
+        
         cursor.execute("UPDATE questions SET correct_answers = correct_answer, is_multiple_choice = 0")
+        
         cursor.execute("CREATE TABLE questions_new AS SELECT id, category_id, question_text, option_a, option_b, option_c, option_d, correct_answers, is_multiple_choice, feedback FROM questions")
         cursor.execute("DROP TABLE questions")
         cursor.execute("ALTER TABLE questions_new RENAME TO questions")
+        
         conn.commit()
     
     def get_categories(self):
@@ -221,95 +282,59 @@ class QuizApp:
         tk.Button(frame, text="Back", command=self.show_welcome_screen).pack(pady=20)
     
     def start_quiz(self, category):
-        questions = self.db.get_questions_by_category(category)
+        question_data = self.db.get_questions_by_category(category)
         
-        if not questions:
+        if not question_data:
             messagebox.showinfo("No Questions", f"No questions available for {category}.")
             self.show_category_selection()
             return
         
-        random.shuffle(questions)
+        random.shuffle(question_data)
         
-        self.quiz_data = questions
+        self.quiz_questions = [Question(q) for q in question_data]
         self.current_question = 0
         self.score = 0
-        self.selected_answers = []
         
         self.show_quiz_question()
     
     def show_quiz_question(self):
         frame = self.clear_current_frame()
         
-        progress_text = f"Question {self.current_question + 1} of {len(self.quiz_data)} | Score: {self.score}"
+        progress_text = f"Question {self.current_question + 1} of {len(self.quiz_questions)} | Score: {self.score}"
         tk.Label(frame, text=progress_text, font=("Arial", 12)).pack(pady=10)
         
-        question = self.quiz_data[self.current_question]
-        tk.Label(frame, text=question["question"], font=("Arial", 16), wraplength=700).pack(pady=20)
-        
-        choice_type = "Multiple answers allowed" if question["is_multiple_choice"] else "Select one answer"
-        tk.Label(frame, text=choice_type, font=("Arial", 12, "italic")).pack(pady=5)
-        
-        options_frame = tk.Frame(frame)
-        options_frame.pack(pady=10, fill=tk.X)
-        
-        self.selected_answers = []
-        self.option_vars = []
-        
-        if question["is_multiple_choice"]:
-            for option in question["options"]:
-                var = tk.BooleanVar()
-                self.option_vars.append((var, option))
-                tk.Checkbutton(options_frame, text=option, font=("Arial", 14),
-                              variable=var, padx=10, pady=5).pack(anchor=tk.W)
-        else:
-            answer_var = tk.StringVar()
-            self.option_vars = answer_var
-            for option in question["options"]:
-                tk.Radiobutton(options_frame, text=option, font=("Arial", 14),
-                              variable=answer_var, value=option, padx=10, pady=5).pack(anchor=tk.W)
+        question = self.quiz_questions[self.current_question]
+        question.create_widgets(frame)
         
         tk.Button(frame, text="Submit Answer", font=("Arial", 14),
                   command=self.check_answer, padx=10, pady=5).pack(pady=20)
     
     def check_answer(self):
-        question = self.quiz_data[self.current_question]
-        user_answers = []
+        question = self.quiz_questions[self.current_question]
+        user_answers = question.get_user_answers()
         
-        if question["is_multiple_choice"]:
-            for var, option in self.option_vars:
-                if var.get():
-                    user_answers.append(option)
-            
-            if not user_answers:
-                messagebox.showinfo("Selection Required", "Please select at least one answer.")
-                return
-        else:
-            if not self.option_vars.get():
-                messagebox.showinfo("Selection Required", "Please select an answer.")
-                return
-            user_answers = [self.option_vars.get()]
+        if not user_answers:
+            messagebox.showinfo("Selection Required", 
+                               "Please select at least one answer." if question.is_multiple_choice 
+                               else "Please select an answer.")
+            return
         
-        correct_answers = question["answers"]
-        
-        if question["is_multiple_choice"]:
-            is_correct = set(user_answers) == set(correct_answers)
-        else:
-            is_correct = user_answers[0] in correct_answers
+        is_correct = question.validate_answers(user_answers)
         
         if is_correct:
             self.score += 1
             messagebox.showinfo("Correct!", "Your answer is correct!")
         else:
-            formatted_answers = "\n".join(correct_answers)
+            formatted_answers = "\n".join(question.correct_answers)
             feedback_message = f"The correct answer(s):\n{formatted_answers}"
             
-            if question["feedback"]:
-                feedback_message += f"\n\nExplanation:\n{question['feedback']}"
+            if question.feedback:
+                feedback_message += f"\n\nExplanation:\n{question.feedback}"
                 
             messagebox.showinfo("Incorrect", feedback_message)
         
         self.current_question += 1
-        if self.current_question < len(self.quiz_data):
+        if self.current_question < len(self.quiz_questions):
             self.show_quiz_question()
         else:
             self.show_quiz_results()
@@ -317,10 +342,10 @@ class QuizApp:
     def show_quiz_results(self):
         frame = self.clear_current_frame()
         
-        result_text = f"Quiz Completed!\nYour Score: {self.score}/{len(self.quiz_data)}"
+        result_text = f"Quiz Completed!\nYour Score: {self.score}/{len(self.quiz_questions)}"
         tk.Label(frame, text=result_text, font=("Arial", 20)).pack(pady=30)
         
-        percentage = (self.score / len(self.quiz_data)) * 100
+        percentage = (self.score / len(self.quiz_questions)) * 100
         tk.Label(frame, text=f"{percentage:.1f}%", font=("Arial", 24, "bold")).pack(pady=10)
         
         tk.Button(frame, text="Try Another Quiz", font=("Arial", 14),
@@ -600,7 +625,6 @@ class QuizApp:
             feedback = feedback_text.get("1.0", tk.END).strip()
             
             if not question_text or "" in options:
-                messagebox.showerror("Error if not question_text or "" in options:")
                 messagebox.showerror("Error", "All fields must be filled.")
                 return
             
