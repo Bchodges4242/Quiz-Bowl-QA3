@@ -3,6 +3,7 @@ Requirements:
 Python 3.6+
 Tkinter (included in standard Python installation)
 SQLite3 (included in standard Python installation)
+Make sure the Database file and the application are in the same folder so it can access it. 
 
 Taking a Quiz:
 
