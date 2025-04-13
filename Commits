@@ -7,6 +7,6 @@
 #fixed the score tracker not keeping track of the score.
 #added questions for Accounting and Macro economics. 
 #added questions for Database, Bus App Development, Bus analytics 
-#fixed the sort functions not working in the edit/view questions tab
+#fixed the sort function not sorting in the edit/view questions tab. the list is now sorted by course/category.
 
 
