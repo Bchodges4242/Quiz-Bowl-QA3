@@ -8,5 +8,5 @@
 #added questions for Accounting and Macro economics. 
 #added questions for Database, Bus App Development, Bus analytics 
 #fixed the sort function not sorting in the edit/view questions tab. the list is now sorted by course/category.
-
+#removed unnecessary comments. 
 
