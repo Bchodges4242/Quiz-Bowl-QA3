@@ -10,14 +10,12 @@ class QuizDatabase:
         conn = sqlite3.connect(self.db_file)
         cursor = conn.cursor()
         
-        # Create tables if they don't exist
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL
         )''')
         
-        # Modified questions table to support multiple answers and feedback
         cursor.execute('''
         CREATE TABLE IF NOT EXISTS questions (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,15 +31,12 @@ class QuizDatabase:
             FOREIGN KEY (category_id) REFERENCES categories (id)
         )''')
         
-        # Check if we need to add the feedback column
         cursor.execute("PRAGMA table_info(questions)")
         columns = [info[1] for info in cursor.fetchall()]
         
-        # If the feedback column doesn't exist, add it
         if "feedback" not in columns:
             cursor.execute("ALTER TABLE questions ADD COLUMN feedback TEXT")
         
-        # Check if we need to migrate old data
         if "correct_answer" in columns and "correct_answers" not in columns:
             self._migrate_database(conn, cursor)
         
@@ -49,18 +44,12 @@ class QuizDatabase:
         conn.close()
     
     def _migrate_database(self, conn, cursor):
-        # Add new columns
         cursor.execute("ALTER TABLE questions ADD COLUMN correct_answers TEXT")
         cursor.execute("ALTER TABLE questions ADD COLUMN is_multiple_choice BOOLEAN NOT NULL DEFAULT 0")
-        
-        # Update existing records to use the new structure
         cursor.execute("UPDATE questions SET correct_answers = correct_answer, is_multiple_choice = 0")
-        
-        # Remove old column (SQLite doesn't support DROP COLUMN directly)
         cursor.execute("CREATE TABLE questions_new AS SELECT id, category_id, question_text, option_a, option_b, option_c, option_d, correct_answers, is_multiple_choice, feedback FROM questions")
         cursor.execute("DROP TABLE questions")
         cursor.execute("ALTER TABLE questions_new RENAME TO questions")
-        
         conn.commit()
     
     def get_categories(self):
@@ -97,7 +86,6 @@ class QuizDatabase:
             self.add_category(category_name)
             category_id = self.get_category_id(category_name)
         
-        # Convert correct answers list to JSON string
         correct_answers_json = json.dumps(correct_answers)
         
         conn = sqlite3.connect(self.db_file)
@@ -160,7 +148,6 @@ class QuizDatabase:
         return questions
     
     def update_question(self, question_id, question_text, options, correct_answers, is_multiple_choice, feedback=""):
-        # Convert correct answers list to JSON string
         correct_answers_json = json.dumps(correct_answers)
         
         conn = sqlite3.connect(self.db_file)
@@ -186,7 +173,6 @@ class QuizApp:
         self.root.title("Quiz Application")
         self.root.geometry("800x600")
         
-        # Initialize database and UI
         self.db = QuizDatabase()
         self.admin_password = "1526"
         self.current_frame = None
@@ -260,7 +246,6 @@ class QuizApp:
         question = self.quiz_data[self.current_question]
         tk.Label(frame, text=question["question"], font=("Arial", 16), wraplength=700).pack(pady=20)
         
-        # Show whether single or multiple choice
         choice_type = "Multiple answers allowed" if question["is_multiple_choice"] else "Select one answer"
         tk.Label(frame, text=choice_type, font=("Arial", 12, "italic")).pack(pady=5)
         
@@ -270,7 +255,6 @@ class QuizApp:
         self.selected_answers = []
         self.option_vars = []
         
-        # Use checkboxes for multiple choice, radio buttons for single choice
         if question["is_multiple_choice"]:
             for option in question["options"]:
                 var = tk.BooleanVar()
@@ -291,7 +275,6 @@ class QuizApp:
         question = self.quiz_data[self.current_question]
         user_answers = []
         
-        # Collect the user's answer(s)
         if question["is_multiple_choice"]:
             for var, option in self.option_vars:
                 if var.get():
@@ -306,10 +289,8 @@ class QuizApp:
                 return
             user_answers = [self.option_vars.get()]
         
-        # Check if the answer is correct
         correct_answers = question["answers"]
         
-        # For multiple choice, all selections must match exactly
         if question["is_multiple_choice"]:
             is_correct = set(user_answers) == set(correct_answers)
         else:
@@ -322,7 +303,6 @@ class QuizApp:
             formatted_answers = "\n".join(correct_answers)
             feedback_message = f"The correct answer(s):\n{formatted_answers}"
             
-            # Add feedback if available
             if question["feedback"]:
                 feedback_message += f"\n\nExplanation:\n{question['feedback']}"
                 
@@ -424,7 +404,6 @@ class QuizApp:
         question_entry = tk.Entry(form_frame, font=("Arial", 14), width=40)
         question_entry.grid(row=1, column=1, pady=10, padx=5, sticky=tk.W+tk.E)
         
-        # Multiple choice checkbox
         multiple_choice_var = tk.BooleanVar()
         tk.Checkbutton(form_frame, text="Multiple Correct Answers", font=("Arial", 14),
                       variable=multiple_choice_var).grid(row=2, column=1, sticky=tk.W, pady=5)
@@ -438,12 +417,10 @@ class QuizApp:
             option_entry.grid(row=3+i, column=1, pady=5, padx=5, sticky=tk.W+tk.E)
             option_entries.append(option_entry)
             
-            # Checkbox for marking correct answers
             var = tk.BooleanVar()
             option_vars.append(var)
             tk.Checkbutton(form_frame, text="Correct", variable=var).grid(row=3+i, column=2, padx=5)
         
-        # Add feedback field for incorrect answers
         tk.Label(form_frame, text="Feedback:", font=("Arial", 14)).grid(row=7, column=0, sticky=tk.W, pady=10)
         feedback_text = tk.Text(form_frame, font=("Arial", 12), width=40, height=5)
         feedback_text.grid(row=7, column=1, pady=10, padx=5, sticky=tk.W+tk.E)
@@ -463,7 +440,6 @@ class QuizApp:
                 messagebox.showerror("Error", "All fields must be filled.")
                 return
             
-            # Collect correct answers
             correct_answers = []
             for i, var in enumerate(option_vars):
                 if var.get():
@@ -473,7 +449,6 @@ class QuizApp:
                 messagebox.showerror("Error", "Please select at least one correct answer.")
                 return
             
-            # For single choice questions, ensure only one answer is selected
             if not is_multiple_choice and len(correct_answers) > 1:
                 messagebox.showerror("Error", "Single choice questions can only have one correct answer.")
                 return
@@ -586,7 +561,6 @@ class QuizApp:
         question_entry.insert(0, question_data["question"])
         question_entry.grid(row=1, column=1, pady=10, padx=5, sticky=tk.W+tk.E)
         
-        # Multiple choice checkbox
         multiple_choice_var = tk.BooleanVar(value=question_data["is_multiple_choice"])
         tk.Checkbutton(form_frame, text="Multiple Correct Answers", font=("Arial", 14),
                       variable=multiple_choice_var).grid(row=2, column=1, sticky=tk.W, pady=5)
@@ -604,14 +578,12 @@ class QuizApp:
             option_entry.grid(row=3+i, column=1, pady=5, padx=5, sticky=tk.W+tk.E)
             option_entries.append(option_entry)
             
-            # Checkbox for marking correct answers
             var = tk.BooleanVar()
             if question_data["options"][i] in question_data["answers"]:
                 var.set(True)
             option_vars.append(var)
             tk.Checkbutton(form_frame, text="Correct", variable=var).grid(row=3+i, column=2, padx=5)
         
-        # Add feedback field
         tk.Label(form_frame, text="Feedback:", font=("Arial", 14)).grid(row=7, column=0, sticky=tk.W, pady=10)
         feedback_text = tk.Text(form_frame, font=("Arial", 12), width=40, height=5)
         feedback_text.insert("1.0", question_data["feedback"])
@@ -632,7 +604,6 @@ class QuizApp:
                 messagebox.showerror("Error", "All fields must be filled.")
                 return
             
-            # Collect correct answers
             correct_answers = []
             for i, var in enumerate(option_vars):
                 if var.get():
@@ -642,7 +613,6 @@ class QuizApp:
                 messagebox.showerror("Error", "Please select at least one correct answer.")
                 return
             
-            # For single choice questions, ensure only one answer is selected
             if not is_multiple_choice and len(correct_answers) > 1:
                 messagebox.showerror("Error", "Single choice questions can only have one correct answer.")
                 return
