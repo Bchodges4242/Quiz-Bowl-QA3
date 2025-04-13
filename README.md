@@ -1,10 +1,10 @@
-Requirements
+Requirements:
 
 Python 3.6+
 Tkinter (included in standard Python installation)
 SQLite3 (included in standard Python installation)
 
-Taking a Quiz
+Taking a Quiz:
 
 Launch the application
 Click on "Take a Quiz"
@@ -12,7 +12,7 @@ Select a quiz category
 Answer the questions presented
 View your final score at the end
 
-Admin Functions
+Admin Functions:
 
 Launch the application
 Click on "Admin Login"
@@ -23,7 +23,8 @@ Add new quiz categories
 Create new questions
 View, edit, or delete existing questions
 
-Customization
+Customization: 
+
 Changing the Admin Password
 Edit the self.admin_password value in the QuizApp.__init__ method to set a custom password.
 Database Location
