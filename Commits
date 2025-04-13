@@ -6,4 +6,7 @@
 #added answer feedback on incorrect answers. 
 #fixed the score tracker not keeping track of the score.
 #added questions for Accounting and Macro economics. 
+#added questions for Database, Bus App Development, Bus analytics 
+#fixed the sort functions not working in the edit/view questions tab
+
 
